@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Printable Form — Multiple Copies</title>
+  <style>
+    /* Basic layout */
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 20px; color:#111; }
+     table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+  font-family: 'Century Gothic', sans-serif;
+  font-size: 12pt;
+  padding:2px;
+}
+
+    .container { max-width:900px; margin:0 auto; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:12px; }
+    .controls { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    label { font-size:0.9rem; }
+    input[type="number"] { width:50px; padding:6px 8px; font-size:1rem; }
+    input[type="text"] { padding:6px 8px; font-size:1rem; }
+    button { padding:8px 12px; font-size:1rem; cursor:pointer; border-radius:6px; border:1px solid #888; background:#f5f5f5; }
+    button.primary { background:#0b74de; color:white; border-color:#095aa3; }
+
+    /* Printable card style */
+    .print-area { display:flex; flex-direction:column;   } 
+    /* Visual page break for printing: each .form-card-copy prints on its own page */
+    .form-card-copy { page-break-after: always; }
+
+    /* Hide UI controls when printing */
+    @media print {
+      body { margin:0; }
+      header, .controls, .note { display:none !important; }
+      .form-card { box-shadow:none; border:1px solid #000; }
+      /* Prevent printing more than one copy per page as set by .form-card-copy */
+      .form-card-copy { page-break-after: always; }
+      
+    }
+
+    @media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+ 
+  @media print {
+  @page {
+    size: Letter;          /* 8.5 x 11 inches */
+    margin-top: 0;         /* Remove top margin */
+    margin-right: 7mm;    /* Optional: keep side margins */
+    margin-bottom: 7mm;   /* Optional: keep bottom margin */
+    margin-left: 7mm;     /* Optional: keep side margins */
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0,10,10,0 !important;
+  }
+
+  .container {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+}
+ 
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header> 
+      <div class="controls" aria-hidden="false">
+        <label for="copies">Number of copies:
+          <input id="copies" type="number" min="1" max="100" value="1" />
+        </label>
+        <label for="reference">Reference:
+          <input id="startSRN" type="text" value="CNMIS-2025-08-0057"/>
+        </label>
+        <button id="previewBtn">Preview Copies</button>
+        <button id="printBtn" class="primary">Preview & Print</button>
+        <button id="resetBtn">Reset Form</button>
+      </div>
+    </header>
+ 
+    <!-- Print area (cloned copies placed here) -->
+    <div id="printArea" class="print-area" aria-hidden="true"></div>
+ 
+  </div>
+
+  <script>
+    // Utility: sanitize numeric input and limit copies
+    const copiesInput = document.getElementById('copies');
+    const printArea = document.getElementById('printArea');
+    const sourceForm = document.getElementById('sourceForm');
+
+    function incrementSRN(srn, increment) {
+        const match = srn.match(/(\d+)$/);
+        if (!match) return srn;
+        const number = parseInt(match[1], 10) + increment;
+        return srn.replace(/\d+$/, number.toString().padStart(match[1].length, '0'));
+    }
+
+    function buildCopies(n) {
+      let startSRN = document.getElementById('startSRN').value;
+
+      // Clear previous
+      printArea.innerHTML = '';
+      // Clone the form n times. We clone the current values (not the input elements themselves) to preserve what user entered.
+     for (let i=0; i<n; i++) {
+    // Get current month as two digits (01–12)
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+
+    // Replace the month (second segment) with current month
+    let updatedSRN = startSRN.replace(/(CNMIS-\d{4}-)\d{2}(-\d+)/, `$1${currentMonth}$2`);
+    
+    // Increment the number sequence for each copy
+    const srn = incrementSRN(updatedSRN, i);
+
+    const cloneWrapper = document.createElement('div'); 
+    cloneWrapper.classList.add("form-card-copy"); 
+    const tableForm = document.createElement('div');
+    tableForm.innerHTML = `
+
+            <div style="text-align:right; margin-bottom:4px;">
+              <img src="images/logo.jpg" alt="My Image" style="max-height:90px; max-width:100%; height:auto;">
+            </div>
+            <table style="width:100%; border: 4px solid black; border-collapse:collapse; table-layout:fixed; font-family:'Century Gothic', sans-serif; font-size:12pt;">
+                <colgroup>
+                  <col style="width:142px;">
+                  <col style="width:100px;">
+                  <col style="width:100px;">
+                  <col style="width:80px;">
+                  <col style="width:90px;">
+                  <col style="width:90px;">
+                  <col style="width:90px;">
+                  <col style="width:90px;">
+                  <col style="width:87px;">
+                  <col style="width:0px;">
+                </colgroup>  
+                <tr>
+                    <th colspan="11" style="border: 2px solid black; background-color:#DFEDF0; height:40px; font-size:14pt; text-align:center;">
+                        SERVICE REQUEST FORM
+                    </th>
+                </tr>
+                <tr style="height:35px;">
+                    <td><b>DATE REQUESTED:</b></td>
+                    <td colspan="3"></td> 
+                    <td colspan="2"><b>SERVICE REQUEST #:</b></td>
+                    <td colspan="5" style="color:blue;"><b>${srn}</b></td>
+                </tr>
+                <tr style="height:35px;">
+                    <td><b>DEPARTMENT:</b></td>
+                    <td colspan="10"></td> 
+                </tr>
+                <tr style="height:35px;">
+                    <td><b>MODULE:</b></td>
+                    <td colspan="10"></td> 
+                </tr> 
+                <tr style="height:35px;">
+                    <td><b>FORM #:</b></td>
+                    <td colspan="2"></td>  
+                    <td colspan="2"><b>SYSTEM FORM NAME:</b></td>
+                    <td colspan="6"></td> 
+                </tr>
+                <tr style="background-color:#DFEDF0; height:40px; font-size:14pt; text-align:center;">
+                    <td colspan="4"><b>CONCERN TYPE:</b></td> 
+                    <td colspan="7"><b>SERVICE REQUEST #:</b></td>  
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="4" style="font-size:11pt;">
+                    <input type="checkbox"> New (Function/Field/Entry/Column/Row)
+                    </td> 
+                    <td colspan="3" style="font-size:11pt;">
+                        <input type="checkbox"> Basic - Committed Date:
+                    </td>
+                    <td colspan="4"></td> 
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="4" style="font-size:11pt;">
+                    <input type="checkbox"> Revision (Enhancement of Existing)
+                    </td> 
+                    <td colspan="7" style="font-size:11pt;">
+                        <input type="checkbox"> Immediate:
+                    </td> 
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="4" style="font-size:11pt;">
+                    <input type="checkbox"> Delete (Dropped <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Query/Function/Row/Column/Data Point)
+                    </td> 
+                    <td colspan="7" style="font-size:11pt;">
+                        <input type="checkbox"> Addtl Customization/Outside Scope
+                    </td> 
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="4" style="font-size:11pt;">
+                    <input type="checkbox"> Cosmetics (Fonts/Color/Header/Footer)
+                    </td> 
+                    <td colspan="7"></td> 
+
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="4" style="font-size:11pt;">
+                    <input type="checkbox"> Data (Override/Deletion)
+                    </td> 
+                    <td colspan="7"></td> 
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="4" style="font-size:11pt;">
+                    <input type="checkbox"> Bugs
+                    </td> 
+                    <td colspan="7"></td> 
+                </tr>
+                <tr style="background-color:#DFEDF0; height:40px; font-size:14pt; text-align:center;">
+                    <td colspan="5"><b>DATA POINTS</b></td> 
+                    <td colspan="6"><b>REFERENCE DATA FIELD</b></td> 
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="5">
+                    1)
+                    </td> 
+                    <td colspan="6">
+                        
+                    </td>
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="5">
+                    2)
+                    </td> 
+                    <td colspan="6">
+                        
+                    </td>
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="5">
+                    3)
+                    </td> 
+                    <td colspan="6">
+                        
+                    </td>
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="5">
+                    4)
+                    </td> 
+                    <td colspan="6">
+                        
+                    </td>
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="5">
+                    5)
+                    </td> 
+                    <td colspan="6">
+                        
+                    </td>
+                </tr>
+                <tr style="height:30px;">
+                    <td colspan="11">
+                    <em>NOTE: Additional concerns may be written on the back page.</em>
+                    </td>  
+                </tr>
+                <tr style="height:40px;">
+                    <td colspan="3"></td>  
+                    <td colspan="3"> </td>  
+                    <td colspan="5"> </td>  
+                </tr>
+                <tr style="text-align:center;height:35px;">
+                    <td colspan="3"><b>USER</b></td>  
+                    <td colspan="3"><b>DEPARMENT HEAD</b></td>  
+                    <td colspan="5"><b>IT HEAD</b></td>  
+                </tr>
+                <tr style="height:40px;">
+                    <td colspan="3"></td>  
+                    <td colspan="3"> </td>  
+                    <td colspan="5"> </td>  
+                </tr>
+                <tr style="text-align:center;height:35px;">
+                    <td colspan="3"><b>INTEGRATOR</b></td>  
+                    <td colspan="3"><b>DEVELOPER</b></td>  
+                    <td colspan="5"><b>QA</b></td>  
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="11"></td>    
+                </tr>
+                <tr style="height:35px;">
+                   <td colspan="3" style="font-size:11pt">
+                       <input type="checkbox"> Print Out as Per User Request
+                   </td>
+                    <td colspan="2" style="font-size:11pt">Date:</td>  
+                    <td colspan="6"></td>  
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="3" style="font-size:11pt">
+                        <input type="checkbox"> Current System Print Out
+                    </td>  
+                    <td colspan="2" style="font-size:11pt">Date:</td>  
+                    <td colspan="6"></td>  
+                </tr>
+                <tr style="height:35px;">
+                    <td colspan="3" style="font-size:11pt">
+                        <input type="checkbox"> Modified/Revised Print Out
+                    </td>  
+                    <td colspan="2" style="font-size:11pt">Patch Installed On:</td>  
+                    <td colspan="6"></td>  
+                </tr>
+            </table> 
+        `; 
+
+        cloneWrapper.appendChild(tableForm);
+ 
+        printArea.appendChild(cloneWrapper);
+      }
+    }
+
+    // Simple escaping for HTML injection safety in this local page
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    // Button events
+    document.getElementById('previewBtn').addEventListener('click', () => {
+      const n = Number(copiesInput.value) || 1;
+      if (n < 1) { alert('Please enter a positive number of copies.'); return; }
+      if (n > 100) {
+        if (!confirm('You requested ' + n + ' copies. This may produce many pages. Continue?')) return;
+      }
+      buildCopies(n);
+      // Make print area visible for preview
+      printArea.scrollIntoView({behavior:'smooth'});
+    });
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+      const n = Number(copiesInput.value) || 1;
+      if (n < 1) { alert('Please enter a positive number of copies.'); return; }
+      if (n > 100) {
+        if (!confirm('You requested ' + n + ' copies. This may produce many pages. Continue?')) return;
+      }
+      buildCopies(n);
+
+      // Hide interactive controls from screen readers/assistive UI? We set aria-hidden.
+      printArea.setAttribute('aria-hidden', 'false');
+
+      // Delay slightly to allow DOM reflow before print
+       setTimeout(() => {
+      window.print();
+        // After printing, keep printArea (so user can inspect) or clear if you want:
+        // printArea.innerHTML = '';
+      }, 200);
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      // Reset inputs
+      const inputs = sourceForm.querySelectorAll('input, textarea, select');
+      inputs.forEach(inp => {
+        if (inp.type === 'number') {
+          if (inp.id === 'qty') inp.value = 1;
+          else inp.value = '';
+        } else if (inp.type === 'date') inp.value = '';
+        else inp.value = '';
+      });
+      copiesInput.value = 1;
+      printArea.innerHTML = '';
+      sourceForm.scrollIntoView({behavior:'smooth'});
+    });
+
+    // Allow Enter key on copies input to preview
+    copiesInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('previewBtn').click();
+      }
+    });
+
+    // Optional: Build 1 copy initially so user can see a preview at first click
+    // buildCopies(1);
+  </script>
+</body>
+</html>
